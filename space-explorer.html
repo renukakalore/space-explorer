@@ -1,0 +1,2426 @@
+<!doctype doctype>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solar System Explorer</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+      background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a14 100%);
+      height: 100%;
+      width: 100%;
+    }
+
+    html {
+      height: 100%;
+      width: 100%;
+    }
+
+    .container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 20px;
+      text-align: center;
+      z-index: 100;
+    }
+
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 2em;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      margin: 0;
+      font-size: 0.9em;
+      opacity: 0.8;
+    }
+
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+    }
+
+    #spaceCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    #spaceCanvas:active {
+      cursor: grabbing;
+    }
+
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+
+    .control-btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85em;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .control-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .control-btn:active {
+      transform: translateY(0);
+    }
+
+    .info-panel {
+      position: absolute;
+      top: 100px;
+      right: 20px;
+      width: 280px;
+      max-height: 70%;
+      padding: 20px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      overflow-y: auto;
+      z-index: 10;
+      opacity: 0;
+      transform: translateX(20px);
+      transition: all 0.3s;
+      pointer-events: none;
+    }
+
+    .info-panel.visible {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    .info-panel h2 {
+      margin: 0 0 16px 0;
+      font-size: 1.3em;
+    }
+
+    .info-section {
+      margin-bottom: 16px;
+    }
+
+    .info-section h3 {
+      margin: 0 0 8px 0;
+      font-size: 0.9em;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.7;
+    }
+
+    .info-section p {
+      margin: 0;
+      font-size: 0.95em;
+      line-height: 1.6;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .stat-item {
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .stat-label {
+      font-size: 0.75em;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 1.1em;
+      font-weight: 600;
+    }
+
+    .legend {
+      position: absolute;
+      top: 100px;
+      left: 20px;
+      padding: 16px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+
+    .legend-title {
+      font-size: 0.85em;
+      font-weight: 600;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 0.85em;
+    }
+
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .instructions {
+      position: absolute;
+      bottom: 90px;
+      left: 20px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      backdrop-filter: blur(10px);
+      font-size: 0.8em;
+      opacity: 0.8;
+      z-index: 10;
+    }
+
+    .instructions div {
+      margin-bottom: 4px;
+    }
+
+    .welcome-screen {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      position: relative;
+    }
+
+    .welcome-screen::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(2px 2px at 20% 30%, white, transparent),
+        radial-gradient(2px 2px at 60% 70%, white, transparent),
+        radial-gradient(1px 1px at 50% 50%, white, transparent),
+        radial-gradient(1px 1px at 80% 10%, white, transparent),
+        radial-gradient(2px 2px at 90% 60%, white, transparent),
+        radial-gradient(1px 1px at 33% 80%, white, transparent),
+        radial-gradient(1px 1px at 15% 90%, white, transparent);
+      background-size: 200% 200%;
+      background-position: 0% 0%;
+      animation: twinkle 8s ease-in-out infinite;
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.6; }
+    }
+
+    .welcome-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding-bottom: 40px;
+    }
+
+    .hero-section {
+      text-align: center;
+      margin-bottom: 50px;
+      padding: 50px 20px;
+      background: linear-gradient(135deg, rgba(65, 105, 225, 0.15), rgba(138, 43, 226, 0.15));
+      border-radius: 25px;
+      backdrop-filter: blur(15px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 10px 40px rgba(65, 105, 225, 0.3), inset 0 0 60px rgba(138, 43, 226, 0.05);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: drift 60s linear infinite;
+    }
+
+    @keyframes drift {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(50px, 50px); }
+    }
+
+    .cosmic-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .title-icon {
+      font-size: 3em;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .hero-section h2 {
+      font-size: 2.8em;
+      margin: 0;
+      background: linear-gradient(135deg, #4169e1, #9370db, #e066ff, #4169e1);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientShift 5s ease infinite;
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 0 30px rgba(65, 105, 225, 0.5);
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .hero-description {
+      font-size: 1.2em;
+      opacity: 0.9;
+      margin: 20px 0 0 0;
+      line-height: 1.6;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 25px;
+      margin-bottom: 40px;
+    }
+
+    .info-card {
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.7), rgba(15, 15, 35, 0.8));
+      padding: 30px;
+      border-radius: 18px;
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      transition: all 0.4s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .info-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at top right, rgba(65, 105, 225, 0.1), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .info-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 15px 40px rgba(65, 105, 225, 0.4), 0 0 30px rgba(138, 43, 226, 0.2);
+      border-color: rgba(65, 105, 225, 0.5);
+    }
+
+    .info-card:hover::before {
+      opacity: 1;
+    }
+
+    .card-icon {
+      font-size: 3.5em;
+      margin-bottom: 15px;
+      filter: drop-shadow(0 0 10px rgba(65, 105, 225, 0.5));
+      animation: iconFloat 3s ease-in-out infinite;
+      display: inline-block;
+    }
+
+    @keyframes iconFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .info-card h3 {
+      font-size: 1.5em;
+      margin: 0 0 15px 0;
+      color: #4169e1;
+    }
+
+    .info-card p {
+      margin: 0 0 15px 0;
+      line-height: 1.8;
+      opacity: 0.9;
+    }
+
+    .fact-highlight {
+      background: rgba(65, 105, 225, 0.15);
+      padding: 15px;
+      border-radius: 10px;
+      border-left: 3px solid #4169e1;
+      margin-top: 15px;
+      line-height: 1.6;
+    }
+
+    .fact-highlight strong {
+      color: #6495ed;
+    }
+
+    .planet-list {
+      list-style: none;
+      padding: 0;
+      margin: 15px 0 0 0;
+    }
+
+    .planet-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      line-height: 1.6;
+    }
+
+    .planet-list li:last-child {
+      border-bottom: none;
+    }
+
+    .planet-list strong {
+      color: #6495ed;
+    }
+
+    .explore-btn {
+      display: block;
+      margin: 50px auto;
+      padding: 22px 60px;
+      font-size: 1.4em;
+      font-weight: 600;
+      background: linear-gradient(135deg, #4169e1, #9370db, #4169e1);
+      background-size: 200% 200%;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 8px 25px rgba(65, 105, 225, 0.5), 0 0 40px rgba(138, 43, 226, 0.3);
+      position: relative;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 8px 25px rgba(65, 105, 225, 0.5), 0 0 40px rgba(138, 43, 226, 0.3);
+      }
+      50% {
+        box-shadow: 0 8px 35px rgba(65, 105, 225, 0.7), 0 0 60px rgba(138, 43, 226, 0.5);
+      }
+    }
+
+    .explore-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 12px 40px rgba(65, 105, 225, 0.8), 0 0 80px rgba(138, 43, 226, 0.6);
+      background-position: 100% 0;
+      animation: none;
+    }
+
+    .explore-btn span {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .fun-facts {
+      background: linear-gradient(135deg, rgba(138, 43, 226, 0.15), rgba(65, 105, 225, 0.15));
+      padding: 50px;
+      border-radius: 25px;
+      backdrop-filter: blur(15px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 10px 40px rgba(138, 43, 226, 0.3);
+      position: relative;
+    }
+
+    .fun-facts::before {
+      content: '✨';
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      font-size: 3em;
+      opacity: 0.2;
+      animation: spin 20s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .fun-facts h3 {
+      text-align: center;
+      font-size: 2em;
+      margin: 0 0 30px 0;
+      background: linear-gradient(135deg, #4169e1, #9370db);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .facts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+
+    .fact-item {
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.6), rgba(15, 15, 35, 0.7));
+      padding: 22px;
+      border-radius: 15px;
+      text-align: center;
+      font-size: 1.05em;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .fact-item::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(65, 105, 225, 0.3), transparent 40%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .fact-item:hover {
+      transform: scale(1.08) translateY(-5px);
+      background: linear-gradient(135deg, rgba(65, 105, 225, 0.3), rgba(138, 43, 226, 0.2));
+      border-color: rgba(65, 105, 225, 0.5);
+      box-shadow: 0 8px 25px rgba(65, 105, 225, 0.4), 0 0 20px rgba(138, 43, 226, 0.3);
+    }
+
+    .fact-item:hover::before {
+      opacity: 1;
+      animation: rotate 3s linear infinite;
+    }
+
+    @keyframes rotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .info-panel {
+        width: calc(100% - 40px);
+        right: 20px;
+        left: 20px;
+        max-height: 50%;
+      }
+
+      .legend, .instructions {
+        display: none;
+      }
+
+      .controls {
+        flex-wrap: wrap;
+        bottom: 10px;
+      }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="container">
+   <header role="banner">
+    <h1 id="mainTitle">Solar System Explorer</h1>
+    <p class="subtitle" id="subtitle">Interactive 3D space exploration with realistic orbital mechanics</p>
+   </header>
+   <div class="welcome-screen" id="welcomeScreen">
+    <div class="welcome-content">
+     <div class="hero-section">
+      <div class="cosmic-title"><span class="title-icon">🌌</span>
+       <h2>Journey Through The Cosmos</h2>
+      </div>
+      <p class="hero-description">Explore the wonders of our solar system, galaxies beyond, and the infinite expanse of the universe</p>
+     </div>
+     <div class="info-grid">
+      <div class="info-card">
+       <div class="card-icon">
+        ☀️
+       </div>
+       <h3>Our Magnificent Sun</h3>
+       <p>The Sun is a 4.6 billion-year-old yellow dwarf star at the heart of our solar system. It's so massive that it accounts for 99.86% of all the mass in the solar system!</p>
+       <div class="fact-highlight"><strong>Mind-blowing:</strong> Every second, the Sun converts 600 million tons of hydrogen into helium through nuclear fusion, releasing energy equivalent to 100 billion nuclear bombs. This energy takes 100,000 years to travel from the core to the surface, but only 8 minutes to reach Earth!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Temperature:</strong> Core at 15 million°C, surface at 5,500°C</li>
+        <li><strong>Size:</strong> 1.3 million Earths could fit inside</li>
+        <li><strong>Rotation:</strong> Spins faster at equator (25 days) than poles (35 days)</li>
+        <li><strong>Lifespan:</strong> Halfway through its 10 billion year life</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        ☿️
+       </div>
+       <h3>Mercury - The Swift Messenger</h3>
+       <p>The smallest planet and closest to the Sun, Mercury is a world of extremes. Despite being closest to the Sun, it's not the hottest planet!</p>
+       <div class="fact-highlight"><strong>Extreme conditions:</strong> Daytime temperatures reach 430°C (hot enough to melt lead), while nighttime plunges to -180°C. That's a 600°C temperature swing - the most extreme in our solar system!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Surface:</strong> Covered in craters like our Moon</li>
+        <li><strong>Core:</strong> Massive iron core makes up 75% of its radius</li>
+        <li><strong>Orbit:</strong> Completes 3 rotations for every 2 orbits around the Sun</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        ♀️
+       </div>
+       <h3>Venus - Earth's Evil Twin</h3>
+       <p>Venus is the hottest planet in our solar system, even hotter than Mercury! Its thick atmosphere creates a runaway greenhouse effect.</p>
+       <div class="fact-highlight"><strong>Deadly atmosphere:</strong> Surface pressure is 92 times Earth's (like being 900m underwater), temperature is 462°C, and it rains sulfuric acid. The clouds move so fast they circle the planet in just 4 Earth days!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Backwards rotation:</strong> Only planet that spins clockwise</li>
+        <li><strong>Day length:</strong> One Venus day = 243 Earth days</li>
+        <li><strong>Brightness:</strong> Third brightest object in our sky after Sun and Moon</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        🌍
+       </div>
+       <h3>Earth - The Pale Blue Dot</h3>
+       <p>Our home planet is the only known world with life. Earth's perfect distance from the Sun, magnetic field, and water make life possible.</p>
+       <div class="fact-highlight"><strong>Living planet:</strong> Earth has 8.7 million species of life. The oldest rocks are 4 billion years old, but the oldest life forms are 3.5 billion years old. We're traveling through space at 107,000 km/h as we orbit the Sun!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Water world:</strong> 71% covered by oceans, 97% of water is saltwater</li>
+        <li><strong>Atmosphere:</strong> 78% nitrogen, 21% oxygen, protects us from radiation</li>
+        <li><strong>Magnetic shield:</strong> Protects life from deadly solar wind</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        🌙
+       </div>
+       <h3>The Moon - Earth's Guardian</h3>
+       <p>Earth's only natural satellite is moving away from us at 3.8 cm per year. Without the Moon, Earth's axis would wobble chaotically, making life impossible.</p>
+       <div class="fact-highlight"><strong>Formation mystery:</strong> The Moon formed 4.5 billion years ago when a Mars-sized object called Theia smashed into Earth. The debris coalesced into our Moon. Moon rocks brought back by Apollo missions prove this!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Tidal lock:</strong> Same side always faces Earth</li>
+        <li><strong>Influence:</strong> Controls Earth's tides and stabilizes our 23.5° tilt</li>
+        <li><strong>Footprints:</strong> Neil Armstrong's footprints will last millions of years (no wind!)</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        ♂️
+       </div>
+       <h3>Mars - The Red Planet</h3>
+       <p>Mars once had flowing water, a thick atmosphere, and possibly even life! Today it's a frozen desert, but we're searching for signs of ancient life.</p>
+       <div class="fact-highlight"><strong>Olympus Mons:</strong> Home to the largest volcano in the solar system - 21 km tall (2.5 times taller than Mt. Everest) and 600 km wide. Its caldera could swallow the city of Paris!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Red color:</strong> Iron oxide (rust) covers the surface</li>
+        <li><strong>Thin atmosphere:</strong> Just 1% of Earth's atmospheric pressure</li>
+        <li><strong>Two moons:</strong> Phobos and Deimos (Greek for Fear and Panic)</li>
+        <li><strong>Day length:</strong> 24 hours 37 minutes (very similar to Earth!)</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        ♃
+       </div>
+       <h3>Jupiter - The Giant Protector</h3>
+       <p>Jupiter is so massive that all other planets combined equal just 0.4 of Jupiter's mass! It acts as our solar system's vacuum cleaner, deflecting asteroids and comets.</p>
+       <div class="fact-highlight"><strong>The Great Red Spot:</strong> A storm that has raged for at least 400 years! It's larger than Earth and has winds up to 680 km/h. Jupiter also has the strongest magnetic field of any planet - 20,000 times stronger than Earth's!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Composition:</strong> 90% hydrogen, 10% helium (like a star!)</li>
+        <li><strong>Moons:</strong> 95 confirmed moons, including Ganymede (larger than Mercury)</li>
+        <li><strong>Fast spinner:</strong> Day is only 9.9 hours long</li>
+        <li><strong>Rings:</strong> Has faint rings made of dust from meteor impacts</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        ♄
+       </div>
+       <h3>Saturn - The Ringed Beauty</h3>
+       <p>Saturn's spectacular rings are made of billions of chunks of ice and rock. Despite being 95 times more massive than Earth, Saturn is the least dense planet!</p>
+       <div class="fact-highlight"><strong>Would float in water:</strong> Saturn's density is 0.687 g/cm³, less than water (1 g/cm����). If you could find an ocean big enough, Saturn would float! Its hexagonal storm at the north pole is wider than Earth!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Rings:</strong> Span 282,000 km but are only 10 meters thick!</li>
+        <li><strong>Moons:</strong> 146 confirmed moons, including Titan (has liquid lakes!)</li>
+        <li><strong>Composition:</strong> Mostly hydrogen and helium gas</li>
+        <li><strong>Wind speed:</strong> Up to 1,800 km/h at the equator</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        ♅
+       </div>
+       <h3>Uranus - The Sideways Planet</h3>
+       <p>Uranus is tilted 98 degrees on its side, likely from a massive collision billions of years ago. It essentially rolls around the Sun like a ball!</p>
+       <div class="fact-highlight"><strong>Ice giant:</strong> The coldest planetary atmosphere in the solar system at -224°C. It's made of water, methane, and ammonia ices. Uranus has 13 rings and rotates backwards (retrograde) like Venus!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Unique seasons:</strong> Each pole gets 42 years of sunlight, then 42 years of darkness</li>
+        <li><strong>Color:</strong> Blue-green from methane in its atmosphere</li>
+        <li><strong>Moons:</strong> 27 known moons, all named after Shakespeare characters</li>
+        <li><strong>Magnetic field:</strong> Tilted 59° from rotation axis (very unusual!)</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        ♆
+       </div>
+       <h3>Neptune - The Windiest World</h3>
+       <p>Neptune has the strongest winds in the solar system - up to 2,100 km/h! That's faster than the speed of sound on Earth!</p>
+       <div class="fact-highlight"><strong>Dark storms:</strong> Neptune has massive dark storms that appear and disappear. One called the "Great Dark Spot" was as large as Earth! Neptune radiates 2.6 times more energy than it receives from the Sun - it has its own internal heat source!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Discovery:</strong> First planet found by mathematical prediction, not observation</li>
+        <li><strong>Year length:</strong> 165 Earth years - hasn't completed one orbit since discovery in 1846!</li>
+        <li><strong>Moons:</strong> 16 known moons, including Triton (orbits backwards!)</li>
+        <li><strong>Rings:</strong> Has 6 known rings named after Neptune discoverers</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        🌌
+       </div>
+       <h3>The Milky Way Galaxy</h3>
+       <p>Our home galaxy is a barred spiral galaxy containing 200-400 billion stars. It's so vast that light takes 100,000 years to cross it!</p>
+       <div class="fact-highlight"><strong>Cosmic address:</strong> We're located about 26,000 light-years from the galactic center, orbiting at 828,000 km/h. Our solar system completes one orbit around the galaxy every 230 million years - a "galactic year"! The last time we were here, dinosaurs hadn't evolved yet!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Supermassive black hole:</strong> Sagittarius A* at center, 4 million solar masses</li>
+        <li><strong>Age:</strong> 13.6 billion years old (almost as old as the universe!)</li>
+        <li><strong>Structure:</strong> Spiral arms filled with gas, dust, and young stars</li>
+        <li><strong>Neighbors:</strong> Part of the Local Group with Andromeda and 54 other galaxies</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        🌠
+       </div>
+       <h3>Andromeda - Our Future Neighbor</h3>
+       <p>The Andromeda Galaxy is heading toward us at 110 km/s! In 4.5 billion years, Andromeda and the Milky Way will collide and merge into one giant elliptical galaxy.</p>
+       <div class="fact-highlight"><strong>Galactic collision:</strong> Don't worry - galaxies are mostly empty space! Stars are so far apart that during the collision, not a single star will hit another star. The night sky will be spectacular as the two galaxies dance together over billions of years!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Distance:</strong> 2.5 million light-years away</li>
+        <li><strong>Size:</strong> Contains 1 trillion stars (2.5x more than Milky Way!)</li>
+        <li><strong>Visible:</strong> Can be seen with naked eye on dark nights</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        🔭
+       </div>
+       <h3>The Observable Universe</h3>
+       <p>The universe is approximately 13.8 billion years old and spans at least 93 billion light-years in diameter.</p>
+       <div class="fact-highlight"><strong>Expanding cosmos:</strong> Every galaxy is moving away from every other galaxy. Space itself is expanding faster than the speed of light at the farthest edges! The universe doubles in size every 10 billion years. We can only see 5% of the universe - the rest is dark matter (27%) and dark energy (68%)!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Galaxies:</strong> 2 trillion galaxies in the observable universe</li>
+        <li><strong>Stars:</strong> More stars than grains of sand on all Earth's beaches!</li>
+        <li><strong>Age:</strong> 13.8 billion years since the Big Bang</li>
+        <li><strong>Future:</strong> Will expand forever in a "Big Freeze"</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        🕳️
+       </div>
+       <h3>Black Holes - Cosmic Monsters</h3>
+       <p>Black holes are regions where gravity is so strong that nothing, not even light, can escape! They bend space and time itself.</p>
+       <div class="fact-highlight"><strong>Time dilation:</strong> Near a black hole, time slows down dramatically. If you watched a friend fall into a black hole, you'd see them freeze at the event horizon while they experience falling in normally! The largest black hole discovered is 40 billion times the mass of our Sun!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Event horizon:</strong> The point of no return</li>
+        <li><strong>Singularity:</strong> Infinite density at the center</li>
+        <li><strong>Hawking radiation:</strong> Black holes slowly evaporate over time</li>
+        <li><strong>Detection:</strong> Found by their effect on nearby stars and gas</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        💫
+       </div>
+       <h3>Cosmic Origins - The Big Bang</h3>
+       <p>The universe began 13.8 billion years ago in an infinitely hot, infinitely dense point smaller than an atom. Then it expanded faster than light!</p>
+       <div class="fact-highlight"><strong>First moments:</strong> In the first second after the Big Bang, the universe went from smaller than an atom to 100 light-years across! The cosmic microwave background radiation we detect today is light from 380,000 years after the Big Bang - it's the oldest light in the universe!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Temperature:</strong> Started at 10³² degrees (incomprehensibly hot!)</li>
+        <li><strong>First atoms:</strong> Hydrogen and helium formed after 380,000 years</li>
+        <li><strong>First stars:</strong> Ignited 100-200 million years after Big Bang</li>
+        <li><strong>Evidence:</strong> Universe expansion, cosmic background radiation, element ratios</li>
+       </ul>
+      </div>
+      <div class="info-card">
+       <div class="card-icon">
+        ✨
+       </div>
+       <h3>We Are Stardust</h3>
+       <p>Every atom in your body (except hydrogen) was forged in the heart of a dying star billions of years ago!</p>
+       <div class="fact-highlight"><strong>Cosmic recycling:</strong> The carbon in your DNA, calcium in your bones, iron in your blood, and oxygen you breathe were all created in stars. When massive stars explode as supernovas, they scatter these elements across space. These elements eventually form new stars, planets, and life. You are literally made of star stuff!
+       </div>
+       <ul class="planet-list">
+        <li><strong>Hydrogen:</strong> From the Big Bang (13.8 billion years old!)</li>
+        <li><strong>Heavier elements:</strong> Forged in stellar cores over billions of years</li>
+        <li><strong>Gold &amp; uranium:</strong> Only created in supernova explosions</li>
+        <li><strong>Your age:</strong> The atoms in you are billions of years old!</li>
+       </ul>
+      </div>
+     </div><button class="explore-btn" id="exploreBtn"> <span>🚀 Begin 3D Exploration</span> </button>
+     <div class="fun-facts">
+      <h3>Quick Cosmic Facts</h3>
+      <div class="facts-grid">
+       <div class="fact-item">
+        ⚡ Light travels at 299,792 km/s
+       </div>
+       <div class="fact-item">
+        🌟 A teaspoon of neutron star weighs 6 billion tons
+       </div>
+       <div class="fact-item">
+        🕳️ Black holes bend space and time itself
+       </div>
+       <div class="fact-item">
+        🌠 We're made of stardust - literally!
+       </div>
+       <div class="fact-item">
+        🪐 Saturn would float in water (if there was a bathtub big enough)
+       </div>
+       <div class="fact-item">
+        🌙 The Moon is slowly drifting away from Earth
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+   <div class="canvas-container" id="canvasContainer" style="display: none;">
+    <canvas id="spaceCanvas" role="img" aria-label="3D visualization of the solar system"></canvas>
+    <div class="legend" id="legend">
+     <div class="legend-title">
+      Celestial Bodies
+     </div>
+     <div class="legend-item">
+      <div class="legend-color" style="background: #ffd700;"></div><span>Sun</span>
+     </div>
+     <div class="legend-item">
+      <div class="legend-color" style="background: #8c7853;"></div><span>Mercury</span>
+     </div>
+     <div class="legend-item">
+      <div class="legend-color" style="background: #ffc649;"></div><span>Venus</span>
+     </div>
+     <div class="legend-item">
+      <div class="legend-color" style="background: #4169e1;"></div><span>Earth</span>
+     </div>
+     <div class="legend-item">
+      <div class="legend-color" style="background: #9ca3af;"></div><span>Moon</span>
+     </div>
+     <div class="legend-item">
+      <div class="legend-color" style="background: #cd5c5c;"></div><span>Mars</span>
+     </div>
+     <div class="legend-item">
+      <div class="legend-color" style="background: #daa520;"></div><span>Jupiter</span>
+     </div>
+     <div class="legend-item">
+      <div class="legend-color" style="background: #f4e4c1;"></div><span>Saturn</span>
+     </div>
+     <div class="legend-item">
+      <div class="legend-color" style="background: #4fd0e0;"></div><span>Uranus</span>
+     </div>
+     <div class="legend-item">
+      <div class="legend-color" style="background: #4169e1;"></div><span>Neptune</span>
+     </div>
+    </div>
+    <div class="instructions">
+     <div>
+      <strong>��️ Click &amp; Drag:</strong> Rotate view
+     </div>
+     <div>
+      <strong>🔍 Scroll:</strong> Zoom in/out
+     </div>
+     <div>
+      <strong>👆 Click Body:</strong> View details
+     </div>
+    </div>
+    <div class="info-panel" id="infoPanel">
+     <h2 id="infoPanelTitle">Celestial Body Information</h2>
+     <div id="infoContent"></div>
+    </div>
+    <nav class="controls" role="navigation" aria-label="Simulation controls"><button class="control-btn" id="playPauseBtn" aria-label="Play or pause simulation">��️ Pause</button> <button class="control-btn" id="speedUpBtn" aria-label="Increase simulation speed">⏩ Speed Up</button> <button class="control-btn" id="slowDownBtn" aria-label="Decrease simulation speed">⏪ Slow Down</button> <button class="control-btn" id="landEarthBtn" aria-label="Land on Earth">🌍 Land on Earth</button> <button class="control-btn" id="resetBtn" aria-label="Reset view">🔄 Reset</button>
+    </nav>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      main_title: "Solar System Explorer",
+      subtitle: "Interactive 3D space exploration with realistic orbital mechanics",
+      info_panel_title: "Celestial Body Information",
+      background_color: "#0a0a14",
+      surface_color: "#1a1a2e",
+      text_color: "#e0e0e0",
+      primary_action_color: "#4169e1",
+      secondary_action_color: "#6366f1",
+      font_family: "Segoe UI",
+      font_size: 16
+    };
+
+    let config = { ...defaultConfig };
+
+    const canvas = document.getElementById('spaceCanvas');
+    const ctx = canvas.getContext('2d');
+    const infoPanel = document.getElementById('infoPanel');
+    const infoContent = document.getElementById('infoContent');
+
+    let width, height, centerX, centerY;
+    let camera = { x: 0, y: 0, z: 500, rotX: 0, rotY: 0 };
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let isPlaying = true;
+    let timeSpeed = 1;
+    let time = 0;
+    let selectedBody = null;
+    let isLanding = false;
+    let landingProgress = 0;
+    let landingStartCamera = null;
+    let landingTargetCamera = null;
+
+    const celestialBodies = {
+      sun: {
+        name: 'Sun',
+        radius: 30,
+        color: '#ffd700',
+        x: 0, y: 0, z: 0,
+        mass: '1.989 × 10³⁰ kg',
+        distance: '0 AU',
+        period: 'N/A',
+        description: 'The Sun is the star at the center of our Solar System. It contains 99.86% of the mass in the solar system and provides the energy that sustains life on Earth.',
+        facts: [
+          'Surface temperature: 5,500°C',
+          'Core temperature: 15 million°C',
+          'Age: 4.6 billion years'
+        ]
+      },
+      mercury: {
+        name: 'Mercury',
+        radius: 6,
+        color: '#8c7853',
+        orbitRadius: 80,
+        orbitSpeed: 0.00415,
+        angle: 0,
+        x: 0, y: 0, z: 0,
+        mass: '3.285 × 10��³ kg',
+        distance: '0.39 AU (57.9 million km)',
+        period: '88 days',
+        description: 'Mercury is the smallest and innermost planet in the Solar System. It has no atmosphere and experiences extreme temperature variations.',
+        facts: [
+          'Orbital velocity: 47.87 km/s',
+          'Day length: 59 Earth days',
+          'Temperature range: -173°C to 427°C'
+        ]
+      },
+      venus: {
+        name: 'Venus',
+        radius: 11,
+        color: '#ffc649',
+        orbitRadius: 130,
+        orbitSpeed: 0.00162,
+        angle: 1.5,
+        x: 0, y: 0, z: 0,
+        mass: '4.867 × 10²⁴ kg',
+        distance: '0.72 AU (108.2 million km)',
+        period: '225 days',
+        description: 'Venus is the second planet from the Sun and the hottest planet in our solar system due to its thick atmosphere. It rotates backwards compared to most planets.',
+        facts: [
+          'Orbital velocity: 35.02 km/s',
+          'Rotates backwards (retrograde)',
+          'Surface pressure: 92x Earth\'s'
+        ]
+      },
+      earth: {
+        name: 'Earth',
+        radius: 12,
+        color: '#4169e1',
+        orbitRadius: 200,
+        orbitSpeed: 0.001,
+        angle: 3,
+        x: 0, y: 0, z: 0,
+        mass: '5.972 × 10²⁴ kg',
+        distance: '1.0 AU (149.6 million km)',
+        period: '365.25 days',
+        description: 'Earth is the third planet from the Sun and the only known planet to harbor life. It has one natural satellite, the Moon.',
+        facts: [
+          'Orbital velocity: 29.78 km/s',
+          'Rotates once every 24 hours',
+          '71% covered by water'
+        ],
+        hasDetailedTexture: true
+      },
+      moon: {
+        name: 'Moon',
+        radius: 4,
+        color: '#9ca3af',
+        parentBody: 'earth',
+        orbitRadius: 30,
+        orbitSpeed: 0.013,
+        angle: 0,
+        x: 0, y: 0, z: 0,
+        mass: '7.342 × 10²² kg',
+        distance: '384,400 km from Earth',
+        period: '27.3 days',
+        description: 'The Moon is Earth\'s only natural satellite. It influences Earth\'s tides and stabilizes our planet\'s axial tilt.',
+        facts: [
+          'Always shows same face to Earth',
+          'No atmosphere',
+          'Surface gravity: 1/6 of Earth\'s'
+        ]
+      },
+      mars: {
+        name: 'Mars',
+        radius: 8,
+        color: '#cd5c5c',
+        orbitRadius: 280,
+        orbitSpeed: 0.00053,
+        angle: 4.5,
+        x: 0, y: 0, z: 0,
+        mass: '6.39 × 10²³ kg',
+        distance: '1.52 AU (227.9 million km)',
+        period: '687 days',
+        description: 'Mars is the fourth planet from the Sun, known as the Red Planet due to iron oxide on its surface. It has two small moons: Phobos and Deimos.',
+        facts: [
+          'Orbital velocity: 24.07 km/s',
+          'Day length: 24.6 hours',
+          'Largest volcano in solar system'
+        ]
+      },
+      phobos: {
+        name: 'Phobos',
+        radius: 2,
+        color: '#6b5d56',
+        parentBody: 'mars',
+        orbitRadius: 18,
+        orbitSpeed: 0.03,
+        angle: 0,
+        x: 0, y: 0, z: 0,
+        mass: '1.0659 × 10¹⁶ kg',
+        distance: '9,376 km from Mars',
+        period: '7.7 hours',
+        description: 'Phobos is the larger and inner moon of Mars. It orbits so close and fast that it rises in the west and sets in the east!',
+        facts: [
+          'Doomed moon: Will crash into Mars in 50 million years',
+          'Named after Greek god of fear',
+          'Heavily cratered potato-shaped moon'
+        ]
+      },
+      deimos: {
+        name: 'Deimos',
+        radius: 1.5,
+        color: '#7a6d66',
+        parentBody: 'mars',
+        orbitRadius: 28,
+        orbitSpeed: 0.015,
+        angle: 2,
+        x: 0, y: 0, z: 0,
+        mass: '1.4762 × 10¹⁵ kg',
+        distance: '23,463 km from Mars',
+        period: '30.3 hours',
+        description: 'Deimos is the smaller and outer moon of Mars. It appears as a bright star in the Martian sky.',
+        facts: [
+          'Named after Greek god of panic',
+          'Smooth surface covered in dust',
+          'Only 15 km in diameter'
+        ]
+      },
+      jupiter: {
+        name: 'Jupiter',
+        radius: 25,
+        color: '#daa520',
+        orbitRadius: 400,
+        orbitSpeed: 0.000084,
+        angle: 0.5,
+        x: 0, y: 0, z: 0,
+        mass: '1.898 × 10²⁷ kg',
+        distance: '5.2 AU (778.5 million km)',
+        period: '11.86 years',
+        description: 'Jupiter is the largest planet in our Solar System, a gas giant with a famous Great Red Spot - a massive storm that has lasted for centuries. It has 95 known moons.',
+        facts: [
+          'Orbital velocity: 13.07 km/s',
+          'Day length: 9.9 hours',
+          'Mass: 2.5x all other planets combined'
+        ]
+      },
+      io: {
+        name: 'Io',
+        radius: 3,
+        color: '#ffdb58',
+        parentBody: 'jupiter',
+        orbitRadius: 35,
+        orbitSpeed: 0.025,
+        angle: 0,
+        x: 0, y: 0, z: 0,
+        mass: '8.9319 × 10²² kg',
+        distance: '421,700 km from Jupiter',
+        period: '1.77 days',
+        description: 'Io is the most volcanically active body in the Solar System! It has over 400 active volcanoes erupting continuously.',
+        facts: [
+          'Volcanoes erupt lava fountains 300 km high',
+          'Surface constantly renewed by lava',
+          'Yellow color from sulfur deposits'
+        ]
+      },
+      europa: {
+        name: 'Europa',
+        radius: 2.8,
+        color: '#b8d4e8',
+        parentBody: 'jupiter',
+        orbitRadius: 45,
+        orbitSpeed: 0.018,
+        angle: 1.5,
+        x: 0, y: 0, z: 0,
+        mass: '4.7998 × 10²² kg',
+        distance: '671,100 km from Jupiter',
+        period: '3.55 days',
+        description: 'Europa has a smooth ice shell covering a global ocean of liquid water! It\'s one of the best places to search for alien life.',
+        facts: [
+          'Ocean may be 100 km deep',
+          'More water than all Earth\'s oceans',
+          'Smoothest surface in solar system'
+        ]
+      },
+      ganymede: {
+        name: 'Ganymede',
+        radius: 4,
+        color: '#9da5a7',
+        parentBody: 'jupiter',
+        orbitRadius: 55,
+        orbitSpeed: 0.012,
+        angle: 3,
+        x: 0, y: 0, z: 0,
+        mass: '1.4819 × 10²³ kg',
+        distance: '1,070,400 km from Jupiter',
+        period: '7.15 days',
+        description: 'Ganymede is the largest moon in the Solar System - bigger than Mercury! It\'s the only moon with its own magnetic field.',
+        facts: [
+          'Diameter: 5,268 km (larger than Mercury)',
+          'Has its own magnetosphere',
+          'Surface mix of ice and rock'
+        ]
+      },
+      callisto: {
+        name: 'Callisto',
+        radius: 3.5,
+        color: '#5c5449',
+        parentBody: 'jupiter',
+        orbitRadius: 68,
+        orbitSpeed: 0.008,
+        angle: 4.5,
+        x: 0, y: 0, z: 0,
+        mass: '1.0759 × 10²³ kg',
+        distance: '1,882,700 km from Jupiter',
+        period: '16.69 days',
+        description: 'Callisto is the most heavily cratered object in the Solar System. Its ancient surface is 4 billion years old!',
+        facts: [
+          'Most cratered body known',
+          'May have subsurface ocean',
+          'Ancient surface unchanged for billions of years'
+        ]
+      },
+      saturn: {
+        name: 'Saturn',
+        radius: 22,
+        color: '#f4e4c1',
+        orbitRadius: 520,
+        orbitSpeed: 0.000034,
+        angle: 2,
+        x: 0, y: 0, z: 0,
+        mass: '5.683 × 10²⁶ kg',
+        distance: '9.54 AU (1.43 billion km)',
+        period: '29.46 years',
+        description: 'Saturn is the sixth planet from the Sun, famous for its spectacular ring system made of ice and rock particles. It has 146 known moons.',
+        facts: [
+          'Orbital velocity: 9.69 km/s',
+          'Density: Less than water',
+          'Ring span: 282,000 km'
+        ]
+      },
+      titan: {
+        name: 'Titan',
+        radius: 3.8,
+        color: '#e8a449',
+        parentBody: 'saturn',
+        orbitRadius: 38,
+        orbitSpeed: 0.015,
+        angle: 0,
+        x: 0, y: 0, z: 0,
+        mass: '1.3452 × 10²³ kg',
+        distance: '1,221,870 km from Saturn',
+        period: '15.95 days',
+        description: 'Titan is larger than Mercury and has a thick atmosphere! It has lakes and rivers of liquid methane and ethane on its surface.',
+        facts: [
+          'Only moon with dense atmosphere',
+          'Liquid methane lakes and rivers',
+          'May harbor exotic forms of life'
+        ]
+      },
+      enceladus: {
+        name: 'Enceladus',
+        radius: 2.2,
+        color: '#f0f8ff',
+        parentBody: 'saturn',
+        orbitRadius: 30,
+        orbitSpeed: 0.022,
+        angle: 2,
+        x: 0, y: 0, z: 0,
+        mass: '1.08022 × 10²⁰ kg',
+        distance: '237,948 km from Saturn',
+        period: '1.37 days',
+        description: 'Enceladus shoots giant water geysers into space from its south pole! It has a global ocean beneath its icy surface.',
+        facts: [
+          'Water geysers reach 500 km high',
+          'Subsurface ocean confirmed',
+          'Brightest object in solar system'
+        ]
+      },
+      rhea: {
+        name: 'Rhea',
+        radius: 2.5,
+        color: '#d3d3d3',
+        parentBody: 'saturn',
+        orbitRadius: 48,
+        orbitSpeed: 0.011,
+        angle: 4,
+        x: 0, y: 0, z: 0,
+        mass: '2.306518 × 10²¹ kg',
+        distance: '527,108 km from Saturn',
+        period: '4.52 days',
+        description: 'Rhea is Saturn\'s second-largest moon with a heavily cratered icy surface. It may have its own ring system!',
+        facts: [
+          'May have thin ring system',
+          'Mostly water ice',
+          'Very ancient surface'
+        ]
+      },
+      iapetus: {
+        name: 'Iapetus',
+        radius: 2.4,
+        color: '#8b7d6b',
+        parentBody: 'saturn',
+        orbitRadius: 62,
+        orbitSpeed: 0.006,
+        angle: 5.5,
+        x: 0, y: 0, z: 0,
+        mass: '1.805635 × 10²¹ kg',
+        distance: '3,560,820 km from Saturn',
+        period: '79.33 days',
+        description: 'Iapetus has a bizarre two-tone coloration - one side is bright white, the other dark as coal! It also has a massive equatorial ridge.',
+        facts: [
+          'Walnut-shaped with equatorial ridge',
+          'Two-tone surface: bright and dark',
+          'Ridge is 20 km high!'
+        ]
+      },
+      uranus: {
+        name: 'Uranus',
+        radius: 16,
+        color: '#4fd0e0',
+        orbitRadius: 620,
+        orbitSpeed: 0.000012,
+        angle: 3.5,
+        x: 0, y: 0, z: 0,
+        mass: '8.681 × 10²⁵ kg',
+        distance: '19.19 AU (2.87 billion km)',
+        period: '84.01 years',
+        description: 'Uranus is the seventh planet from the Sun and rotates on its side, likely due to a massive collision. It appears blue-green due to methane in its atmosphere.',
+        facts: [
+          'Orbital velocity: 6.81 km/s',
+          'Tilted 98° on its side',
+          '27 known moons'
+        ]
+      },
+      miranda: {
+        name: 'Miranda',
+        radius: 2,
+        color: '#b0c4de',
+        parentBody: 'uranus',
+        orbitRadius: 24,
+        orbitSpeed: 0.028,
+        angle: 0,
+        x: 0, y: 0, z: 0,
+        mass: '6.59 × 10¹⁹ kg',
+        distance: '129,390 km from Uranus',
+        period: '1.41 days',
+        description: 'Miranda has the most extreme terrain in the Solar System! It looks like it was shattered and reassembled.',
+        facts: [
+          'Verona Rupes: tallest cliff (20 km)',
+          'Patchwork surface of different terrains',
+          'May have been destroyed and reformed'
+        ]
+      },
+      ariel: {
+        name: 'Ariel',
+        radius: 2.3,
+        color: '#c5d9e8',
+        parentBody: 'uranus',
+        orbitRadius: 30,
+        orbitSpeed: 0.020,
+        angle: 2,
+        x: 0, y: 0, z: 0,
+        mass: '1.353 × 10²¹ kg',
+        distance: '190,900 km from Uranus',
+        period: '2.52 days',
+        description: 'Ariel is the brightest of Uranus\'s moons. It has the youngest surface with deep valleys and canyons.',
+        facts: [
+          'Youngest surface of Uranus moons',
+          'Deep valleys and fault canyons',
+          'Bright icy surface'
+        ]
+      },
+      titania: {
+        name: 'Titania',
+        radius: 2.6,
+        color: '#a8b9c9',
+        parentBody: 'uranus',
+        orbitRadius: 38,
+        orbitSpeed: 0.014,
+        angle: 4,
+        x: 0, y: 0, z: 0,
+        mass: '3.527 × 10²¹ kg',
+        distance: '435,910 km from Uranus',
+        period: '8.71 days',
+        description: 'Titania is the largest moon of Uranus. It has a huge canyon system that stretches around the moon.',
+        facts: [
+          'Largest moon of Uranus',
+          'Massive canyon: Messina Chasma',
+          'Mix of ice and rock'
+        ]
+      },
+      neptune: {
+        name: 'Neptune',
+        radius: 15,
+        color: '#4169e1',
+        orbitRadius: 720,
+        orbitSpeed: 0.000006,
+        angle: 5,
+        x: 0, y: 0, z: 0,
+        mass: '1.024 × 10²⁶ kg',
+        distance: '30.07 AU (4.50 billion km)',
+        period: '164.79 years',
+        description: 'Neptune is the eighth and farthest planet from the Sun. It has the strongest winds in the solar system, reaching speeds of 2,100 km/h.',
+        facts: [
+          'Orbital velocity: 5.43 km/s',
+          'Fastest winds in solar system',
+          'Discovered by mathematics'
+        ]
+      },
+      triton: {
+        name: 'Triton',
+        radius: 2.7,
+        color: '#d8bfd8',
+        parentBody: 'neptune',
+        orbitRadius: 28,
+        orbitSpeed: -0.020,
+        angle: 0,
+        x: 0, y: 0, z: 0,
+        mass: '2.14 × 10²² kg',
+        distance: '354,759 km from Neptune',
+        period: '5.88 days',
+        description: 'Triton is the only large moon that orbits backwards (retrograde)! It has nitrogen geysers and is slowly spiraling into Neptune.',
+        facts: [
+          'Orbits backwards (retrograde)',
+          'Coldest surface: -235°C',
+          'Nitrogen ice geysers erupt 8 km high'
+        ]
+      },
+      proteus: {
+        name: 'Proteus',
+        radius: 1.8,
+        color: '#808080',
+        parentBody: 'neptune',
+        orbitRadius: 22,
+        orbitSpeed: 0.025,
+        angle: 3,
+        x: 0, y: 0, z: 0,
+        mass: '4.4 × 10¹⁹ kg',
+        distance: '117,647 km from Neptune',
+        period: '1.12 days',
+        description: 'Proteus is Neptune\'s second-largest moon with a very dark, heavily cratered surface. It\'s irregularly shaped like a potato.',
+        facts: [
+          'Very dark surface (reflects only 6% of light)',
+          'Irregular potato-like shape',
+          'Large impact crater: Pharos'
+        ]
+      }
+    };
+
+    function resizeCanvas() {
+      width = canvas.clientWidth;
+      height = canvas.clientHeight;
+      canvas.width = width;
+      canvas.height = height;
+      centerX = width / 2;
+      centerY = height / 2;
+      if (stars.length > 0) {
+        stars.length = 0;
+        initStars();
+      }
+    }
+
+    function project3D(x, y, z) {
+      const cosX = Math.cos(camera.rotX);
+      const sinX = Math.sin(camera.rotX);
+      const cosY = Math.cos(camera.rotY);
+      const sinY = Math.sin(camera.rotY);
+
+      let tempY = y * cosX - z * sinX;
+      let tempZ = y * sinX + z * cosX;
+      y = tempY;
+      z = tempZ;
+
+      let tempX = x * cosY + z * sinY;
+      tempZ = -x * sinY + z * cosY;
+      x = tempX;
+      z = tempZ;
+
+      const scale = camera.z / (camera.z + z);
+      return {
+        x: centerX + (x - camera.x) * scale,
+        y: centerY + (y - camera.y) * scale,
+        scale: scale,
+        z: z
+      };
+    }
+
+    const stars = [];
+    const starCount = 500;
+    const meteors = [];
+    const maxMeteors = 3;
+    
+    function drawDetailedEarth(x, y, radius, rotation) {
+      // Base sphere with gradient
+      const baseGradient = ctx.createRadialGradient(
+        x - radius * 0.3,
+        y - radius * 0.3,
+        0,
+        x,
+        y,
+        radius
+      );
+      baseGradient.addColorStop(0, '#6ba3d4');
+      baseGradient.addColorStop(0.5, '#4169e1');
+      baseGradient.addColorStop(1, '#1a3a52');
+      
+      ctx.fillStyle = baseGradient;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Clip to sphere
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.clip();
+      
+      const rotationOffset = rotation * 0.5;
+      
+      // Draw continents with realistic shapes
+      ctx.fillStyle = '#2d5016';
+      
+      // North America
+      ctx.save();
+      ctx.translate(x - radius * 0.3 + rotationOffset * 20, y - radius * 0.4);
+      ctx.rotate(-0.2);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, radius * 0.35, radius * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      // South America
+      ctx.save();
+      ctx.translate(x - radius * 0.1 + rotationOffset * 20, y + radius * 0.3);
+      ctx.rotate(0.3);
+      ctx.beginPath();
+      ctx.moveTo(0, -radius * 0.25);
+      ctx.quadraticCurveTo(radius * 0.15, -radius * 0.1, radius * 0.12, radius * 0.2);
+      ctx.quadraticCurveTo(radius * 0.05, radius * 0.35, -radius * 0.05, radius * 0.3);
+      ctx.quadraticCurveTo(-radius * 0.15, radius * 0.1, -radius * 0.1, -radius * 0.1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      
+      // Europe/Africa
+      ctx.save();
+      ctx.translate(x + radius * 0.2 + rotationOffset * 20, y - radius * 0.1);
+      ctx.beginPath();
+      ctx.ellipse(0, -radius * 0.2, radius * 0.25, radius * 0.3, 0, 0, Math.PI * 2);
+      ctx.ellipse(radius * 0.05, radius * 0.25, radius * 0.28, radius * 0.4, 0.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      // Asia (partial)
+      ctx.save();
+      ctx.translate(x + radius * 0.65 + rotationOffset * 20, y - radius * 0.25);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, radius * 0.4, radius * 0.5, -0.3, 0, Math.PI);
+      ctx.fill();
+      ctx.restore();
+      
+      // Australia
+      ctx.save();
+      ctx.translate(x + radius * 0.55 + rotationOffset * 20, y + radius * 0.45);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, radius * 0.2, radius * 0.15, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      // Greenland/Northern regions
+      ctx.save();
+      ctx.translate(x - radius * 0.2 + rotationOffset * 20, y - radius * 0.7);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, radius * 0.15, radius * 0.12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      // Add green tint variations for forests
+      ctx.fillStyle = '#3a6b1f';
+      ctx.globalAlpha = 0.4;
+      
+      ctx.save();
+      ctx.translate(x - radius * 0.25 + rotationOffset * 20, y - radius * 0.3);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, radius * 0.2, radius * 0.25, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      ctx.globalAlpha = 1.0;
+      
+      // Ice caps
+      ctx.fillStyle = '#f0f8ff';
+      
+      // North pole
+      ctx.save();
+      ctx.translate(x, y - radius * 0.85);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, radius * 0.25, radius * 0.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      // South pole
+      ctx.save();
+      ctx.translate(x, y + radius * 0.85);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, radius * 0.3, radius * 0.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      
+      // Cloud patterns
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.globalAlpha = 0.6;
+      
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2 + rotationOffset * 0.8;
+        const cloudX = x + Math.cos(angle) * radius * 0.5;
+        const cloudY = y + Math.sin(angle) * radius * 0.3;
+        const cloudRadius = radius * (0.12 + Math.random() * 0.08);
+        
+        ctx.beginPath();
+        ctx.ellipse(cloudX, cloudY, cloudRadius, cloudRadius * 0.5, angle, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      ctx.restore(); // Restore from clip
+      ctx.globalAlpha = 1.0;
+      
+      // Atmosphere glow
+      const atmoGradient = ctx.createRadialGradient(
+        x,
+        y,
+        radius * 0.95,
+        x,
+        y,
+        radius * 1.15
+      );
+      atmoGradient.addColorStop(0, 'rgba(135, 206, 250, 0)');
+      atmoGradient.addColorStop(0.5, 'rgba(100, 149, 237, 0.4)');
+      atmoGradient.addColorStop(1, 'rgba(100, 149, 237, 0)');
+      
+      ctx.fillStyle = atmoGradient;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 1.15, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Lighting highlight
+      const lightGradient = ctx.createRadialGradient(
+        x - radius * 0.35,
+        y - radius * 0.35,
+        0,
+        x - radius * 0.35,
+        y - radius * 0.35,
+        radius * 0.8
+      );
+      lightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+      lightGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)');
+      lightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      
+      ctx.fillStyle = lightGradient;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    function initStars() {
+      for (let i = 0; i < starCount; i++) {
+        stars.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          radius: Math.random() * 1.5 + 0.5,
+          brightness: Math.random() * 0.8 + 0.2,
+          twinkleSpeed: Math.random() * 0.02 + 0.01,
+          twinkleOffset: Math.random() * Math.PI * 2
+        });
+      }
+    }
+    
+    function createMeteor() {
+      const startX = Math.random() * width;
+      const startY = Math.random() * height * 0.3; // Start in upper portion
+      const angle = Math.random() * Math.PI / 4 + Math.PI / 6; // Diagonal downward
+      const speed = Math.random() * 8 + 6;
+      const length = Math.random() * 60 + 40;
+      const brightness = Math.random() * 0.5 + 0.5;
+      
+      meteors.push({
+        x: startX,
+        y: startY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        length: length,
+        brightness: brightness,
+        life: 1.0,
+        decay: Math.random() * 0.015 + 0.01
+      });
+    }
+    
+    function updateMeteors() {
+      // Randomly spawn meteors
+      if (meteors.length < maxMeteors && Math.random() < 0.02) {
+        createMeteor();
+      }
+      
+      // Update existing meteors
+      for (let i = meteors.length - 1; i >= 0; i--) {
+        const meteor = meteors[i];
+        meteor.x += meteor.vx;
+        meteor.y += meteor.vy;
+        meteor.life -= meteor.decay;
+        
+        // Remove dead or off-screen meteors
+        if (meteor.life <= 0 || meteor.x > width + 100 || meteor.y > height + 100) {
+          meteors.splice(i, 1);
+        }
+      }
+    }
+    
+    function drawMeteors() {
+      meteors.forEach(meteor => {
+        const opacity = meteor.life * meteor.brightness;
+        
+        // Meteor head (bright core)
+        ctx.save();
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = `rgba(255, 200, 100, ${opacity})`;
+        
+        const gradient = ctx.createLinearGradient(
+          meteor.x,
+          meteor.y,
+          meteor.x - meteor.vx * 0.5,
+          meteor.y - meteor.vy * 0.5
+        );
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity})`);
+        gradient.addColorStop(0.3, `rgba(255, 200, 100, ${opacity * 0.8})`);
+        gradient.addColorStop(1, `rgba(255, 150, 50, 0)`);
+        
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(meteor.x, meteor.y);
+        ctx.lineTo(
+          meteor.x - meteor.vx * (meteor.length / meteor.vx),
+          meteor.y - meteor.vy * (meteor.length / meteor.vy)
+        );
+        ctx.stroke();
+        
+        // Meteor trail (glowing tail)
+        const trailGradient = ctx.createLinearGradient(
+          meteor.x - meteor.vx * 0.5,
+          meteor.y - meteor.vy * 0.5,
+          meteor.x - meteor.vx * 2,
+          meteor.y - meteor.vy * 2
+        );
+        trailGradient.addColorStop(0, `rgba(255, 150, 50, ${opacity * 0.6})`);
+        trailGradient.addColorStop(0.5, `rgba(255, 100, 30, ${opacity * 0.3})`);
+        trailGradient.addColorStop(1, `rgba(255, 50, 0, 0)`);
+        
+        ctx.strokeStyle = trailGradient;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(
+          meteor.x - meteor.vx * 0.5,
+          meteor.y - meteor.vy * 0.5
+        );
+        ctx.lineTo(
+          meteor.x - meteor.vx * 2.5,
+          meteor.y - meteor.vy * 2.5
+        );
+        ctx.stroke();
+        
+        // Sparkle particles
+        for (let i = 0; i < 3; i++) {
+          const sparkleX = meteor.x - meteor.vx * (0.3 + i * 0.3);
+          const sparkleY = meteor.y - meteor.vy * (0.3 + i * 0.3);
+          const sparkleSize = (3 - i) * opacity;
+          
+          ctx.fillStyle = `rgba(255, 200, 100, ${opacity * 0.7})`;
+          ctx.beginPath();
+          ctx.arc(sparkleX, sparkleY, sparkleSize, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        ctx.restore();
+      });
+    }
+    
+    function drawStarfield() {
+      stars.forEach((star, index) => {
+        const twinkle = Math.sin(time * star.twinkleSpeed + star.twinkleOffset) * 0.3 + 0.7;
+        const brightness = star.brightness * twinkle;
+        
+        // Add star color variation for realism
+        let starColor = 'rgba(255, 255, 255, ';
+        if (star.brightness > 0.7) {
+          // Blue-white stars (hot)
+          starColor = `rgba(200, 220, 255, `;
+        } else if (star.brightness < 0.4) {
+          // Orange-red stars (cooler)
+          starColor = `rgba(255, 220, 180, `;
+        }
+        
+        // Main star with glow
+        ctx.shadowBlur = star.radius * 3;
+        ctx.shadowColor = starColor + (brightness * 0.8) + ')';
+        ctx.fillStyle = starColor + brightness + ')';
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // Brighter stars get additional glow
+        if (star.radius > 1.2) {
+          ctx.fillStyle = starColor + (brightness * 0.2) + ')';
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.radius * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        // Very bright stars get cross flares
+        if (star.brightness > 0.8 && star.radius > 1.0) {
+          ctx.strokeStyle = starColor + (brightness * 0.4) + ')';
+          ctx.lineWidth = 0.5;
+          const flareLength = star.radius * 4;
+          
+          // Vertical flare
+          ctx.beginPath();
+          ctx.moveTo(star.x, star.y - flareLength);
+          ctx.lineTo(star.x, star.y + flareLength);
+          ctx.stroke();
+          
+          // Horizontal flare
+          ctx.beginPath();
+          ctx.moveTo(star.x - flareLength, star.y);
+          ctx.lineTo(star.x + flareLength, star.y);
+          ctx.stroke();
+        }
+      });
+    }
+    
+    function drawNebula() {
+      const gradient1 = ctx.createRadialGradient(width * 0.3, height * 0.3, 0, width * 0.3, height * 0.3, width * 0.4);
+      gradient1.addColorStop(0, 'rgba(138, 43, 226, 0.03)');
+      gradient1.addColorStop(1, 'rgba(138, 43, 226, 0)');
+      ctx.fillStyle = gradient1;
+      ctx.fillRect(0, 0, width, height);
+      
+      const gradient2 = ctx.createRadialGradient(width * 0.7, height * 0.6, 0, width * 0.7, height * 0.6, width * 0.5);
+      gradient2.addColorStop(0, 'rgba(65, 105, 225, 0.04)');
+      gradient2.addColorStop(1, 'rgba(65, 105, 225, 0)');
+      ctx.fillStyle = gradient2;
+      ctx.fillRect(0, 0, width, height);
+      
+      const gradient3 = ctx.createRadialGradient(width * 0.5, height * 0.8, 0, width * 0.5, height * 0.8, width * 0.3);
+      gradient3.addColorStop(0, 'rgba(75, 0, 130, 0.02)');
+      gradient3.addColorStop(1, 'rgba(75, 0, 130, 0)');
+      ctx.fillStyle = gradient3;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    function updateOrbits() {
+      for (const key in celestialBodies) {
+        const body = celestialBodies[key];
+        if (body.orbitRadius) {
+          body.angle += body.orbitSpeed * timeSpeed;
+          
+          if (body.parentBody) {
+            const parent = celestialBodies[body.parentBody];
+            body.x = parent.x + Math.cos(body.angle) * body.orbitRadius;
+            body.z = parent.z + Math.sin(body.angle) * body.orbitRadius;
+            body.y = parent.y;
+          } else {
+            body.x = Math.cos(body.angle) * body.orbitRadius;
+            body.z = Math.sin(body.angle) * body.orbitRadius;
+            body.y = 0;
+          }
+        }
+      }
+    }
+
+    function drawOrbit(body) {
+      const centerBody = body.parentBody ? celestialBodies[body.parentBody] : celestialBodies.sun;
+      let firstPoint = true;
+      const points = [];
+      
+      // Collect all orbit points
+      for (let angle = 0; angle < Math.PI * 2; angle += 0.05) {
+        const x = centerBody.x + Math.cos(angle) * body.orbitRadius;
+        const z = centerBody.z + Math.sin(angle) * body.orbitRadius;
+        const projected = project3D(x, centerBody.y, z);
+        points.push({ x: projected.x, y: projected.y, z: projected.z });
+      }
+      
+      // Draw orbit with gradient based on depth
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        
+        // Fade based on z-depth
+        const opacity = Math.max(0.1, Math.min(0.4, (p1.z + 1000) / 2000));
+        ctx.strokeStyle = `rgba(100, 149, 237, ${opacity})`;
+        
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+      
+      // Draw dashed line for hidden part of orbit
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = 'rgba(100, 149, 237, 0.1)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        
+        if (p1.z > 0) {
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+        }
+      }
+      ctx.setLineDash([]);
+    }
+
+    function drawBody(body) {
+      const projected = project3D(body.x, body.y, body.z);
+      const radius = body.radius * projected.scale;
+      
+      if (radius > 0) {
+        ctx.save();
+        
+        // Special detailed Earth rendering
+        if (body.hasDetailedTexture && body.name === 'Earth' && radius > 5) {
+          drawDetailedEarth(projected.x, projected.y, radius, time);
+          
+          // Selection highlight
+          if (selectedBody === body) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(projected.x, projected.y, radius + 8, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+          
+          ctx.restore();
+          return { x: projected.x, y: projected.y, radius: radius, z: projected.z };
+        }
+        
+        // Draw shadow/dark side
+        const shadowGradient = ctx.createRadialGradient(
+          projected.x + radius * 0.3,
+          projected.y + radius * 0.3,
+          0,
+          projected.x,
+          projected.y,
+          radius
+        );
+        shadowGradient.addColorStop(0, body.color);
+        shadowGradient.addColorStop(0.7, body.color);
+        shadowGradient.addColorStop(1, '#000000');
+        
+        ctx.fillStyle = shadowGradient;
+        ctx.beginPath();
+        ctx.arc(projected.x, projected.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add realistic lighting with highlight
+        const lightGradient = ctx.createRadialGradient(
+          projected.x - radius * 0.4,
+          projected.y - radius * 0.4,
+          0,
+          projected.x - radius * 0.4,
+          projected.y - radius * 0.4,
+          radius * 1.2
+        );
+        
+        if (body.name === 'Sun') {
+          // Sun glow effect
+          lightGradient.addColorStop(0, 'rgba(255, 255, 200, 0.9)');
+          lightGradient.addColorStop(0.5, 'rgba(255, 215, 0, 0.4)');
+          lightGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+          
+          // Corona glow
+          ctx.shadowBlur = 30;
+          ctx.shadowColor = '#ffd700';
+          ctx.fillStyle = lightGradient;
+          ctx.beginPath();
+          ctx.arc(projected.x, projected.y, radius, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Extra outer glow
+          ctx.shadowBlur = 50;
+          ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
+          ctx.beginPath();
+          ctx.arc(projected.x, projected.y, radius * 1.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        } else {
+          // Planet lighting
+          lightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
+          lightGradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.2)');
+          lightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.fillStyle = lightGradient;
+          ctx.beginPath();
+          ctx.arc(projected.x, projected.y, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalCompositeOperation = 'source-over';
+        }
+        
+        // Add atmospheric glow for gas giants and Earth
+        if (['Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Earth'].includes(body.name)) {
+          const atmoGradient = ctx.createRadialGradient(
+            projected.x,
+            projected.y,
+            radius * 0.95,
+            projected.x,
+            projected.y,
+            radius * 1.15
+          );
+          atmoGradient.addColorStop(0, 'rgba(135, 206, 250, 0)');
+          atmoGradient.addColorStop(0.5, body.name === 'Earth' ? 'rgba(100, 149, 237, 0.3)' : 'rgba(255, 255, 255, 0.15)');
+          atmoGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          
+          ctx.fillStyle = atmoGradient;
+          ctx.beginPath();
+          ctx.arc(projected.x, projected.y, radius * 1.15, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
+        // Draw Saturn's rings
+        if (body.name === 'Saturn') {
+          ctx.globalAlpha = 0.7;
+          
+          // Ring shadow on planet
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+          ctx.beginPath();
+          ctx.ellipse(projected.x, projected.y, radius * 0.9, radius * 0.15, 0, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Main rings
+          const ringGradient = ctx.createRadialGradient(
+            projected.x,
+            projected.y,
+            radius * 1.5,
+            projected.x,
+            projected.y,
+            radius * 2.5
+          );
+          ringGradient.addColorStop(0, 'rgba(244, 228, 193, 0.8)');
+          ringGradient.addColorStop(0.3, 'rgba(210, 180, 140, 0.6)');
+          ringGradient.addColorStop(0.6, 'rgba(244, 228, 193, 0.7)');
+          ringGradient.addColorStop(1, 'rgba(210, 180, 140, 0.3)');
+          
+          ctx.fillStyle = ringGradient;
+          ctx.beginPath();
+          ctx.ellipse(projected.x, projected.y, radius * 2.5, radius * 0.4, 0, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Ring gaps (Cassini Division)
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+          ctx.beginPath();
+          ctx.ellipse(projected.x, projected.y, radius * 2.0, radius * 0.32, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalCompositeOperation = 'source-over';
+          
+          // Ring inner cutout
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+          ctx.beginPath();
+          ctx.ellipse(projected.x, projected.y, radius * 1.4, radius * 0.22, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalCompositeOperation = 'source-over';
+          
+          ctx.globalAlpha = 1.0;
+        }
+        
+        // Add surface details/texture
+        if (body.name !== 'Sun' && radius > 8) {
+          ctx.globalAlpha = 0.15;
+          const rotation = time * 0.5 + (body.angle || 0);
+          
+          for (let i = 0; i < 5; i++) {
+            const angle = (i * Math.PI * 2 / 5) + rotation;
+            const x = projected.x + Math.cos(angle) * radius * 0.6;
+            const y = projected.y + Math.sin(angle) * radius * 0.4;
+            const size = radius * 0.3;
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1.0;
+        }
+        
+        // Selection highlight
+        if (selectedBody === body) {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.arc(projected.x, projected.y, radius + 8, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        
+        ctx.restore();
+        
+        return { x: projected.x, y: projected.y, radius: radius, z: projected.z };
+      }
+      return null;
+    }
+
+    function render() {
+      ctx.fillStyle = config.background_color || defaultConfig.background_color;
+      ctx.fillRect(0, 0, width, height);
+      
+      drawNebula();
+      drawStarfield();
+      drawMeteors();
+      
+      for (const key in celestialBodies) {
+        const body = celestialBodies[key];
+        if (body.orbitRadius) {
+          drawOrbit(body);
+        }
+      }
+      
+      const bodies = Object.values(celestialBodies);
+      bodies.sort((a, b) => {
+        const aProj = project3D(a.x, a.y, a.z);
+        const bProj = project3D(b.x, b.y, b.z);
+        return aProj.z - bProj.z;
+      });
+      
+      const clickableAreas = [];
+      bodies.forEach(body => {
+        const area = drawBody(body);
+        if (area) {
+          clickableAreas.push({ body, ...area });
+          
+          // Draw planet labels
+          if (body.name !== 'Sun' && area.radius > 5) {
+            const customFont = config.font_family || defaultConfig.font_family;
+            const baseFontStack = 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
+            const baseSize = config.font_size || defaultConfig.font_size;
+            
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.font = `${baseSize * 0.7}px ${customFont}, ${baseFontStack}`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Label shadow for readability
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillText(body.name, area.x, area.y + area.radius + 15);
+            ctx.restore();
+          }
+        }
+      });
+      
+      canvas.clickableAreas = clickableAreas;
+    }
+
+    function animate() {
+      if (isPlaying) {
+        time += 0.016 * timeSpeed;
+        updateOrbits();
+        updateMeteors();
+      }
+      
+      if (isLanding) {
+        landingProgress += 0.015;
+        
+        // Smooth easing function
+        const easeProgress = landingProgress < 0.5 
+          ? 2 * landingProgress * landingProgress 
+          : 1 - Math.pow(-2 * landingProgress + 2, 2) / 2;
+        
+        camera.x = landingStartCamera.x + (landingTargetCamera.x - landingStartCamera.x) * easeProgress;
+        camera.y = landingStartCamera.y + (landingTargetCamera.y - landingStartCamera.y) * easeProgress;
+        camera.z = landingStartCamera.z + (landingTargetCamera.z - landingStartCamera.z) * easeProgress;
+        camera.rotX = landingStartCamera.rotX + (landingTargetCamera.rotX - landingStartCamera.rotX) * easeProgress;
+        camera.rotY = landingStartCamera.rotY + (landingTargetCamera.rotY - landingStartCamera.rotY) * easeProgress;
+        
+        if (landingProgress >= 1) {
+          isLanding = false;
+          landingProgress = 0;
+        }
+      }
+      
+      render();
+      requestAnimationFrame(animate);
+    }
+
+    function showInfo(body) {
+      selectedBody = body;
+      infoContent.innerHTML = `
+        <div class="info-section">
+          <h3>Description</h3>
+          <p>${body.description}</p>
+        </div>
+        <div class="info-section">
+          <h3>Key Properties</h3>
+          <div class="stats">
+            <div class="stat-item" style="background: ${config.surface_color || defaultConfig.surface_color};">
+              <div class="stat-label">Mass</div>
+              <div class="stat-value">${body.mass}</div>
+            </div>
+            <div class="stat-item" style="background: ${config.surface_color || defaultConfig.surface_color};">
+              <div class="stat-label">Distance</div>
+              <div class="stat-value">${body.distance}</div>
+            </div>
+            <div class="stat-item" style="background: ${config.surface_color || defaultConfig.surface_color};">
+              <div class="stat-label">Orbital Period</div>
+              <div class="stat-value">${body.period}</div>
+            </div>
+          </div>
+        </div>
+        <div class="info-section">
+          <h3>Interesting Facts</h3>
+          ${body.facts.map(fact => `<p>• ${fact}</p>`).join('')}
+        </div>
+      `;
+      infoPanel.classList.add('visible');
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        const deltaX = e.clientX - lastMouseX;
+        const deltaY = e.clientY - lastMouseY;
+        camera.rotY += deltaX * 0.005;
+        camera.rotX += deltaY * 0.005;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      camera.z += e.deltaY * 0.5;
+      camera.z = Math.max(50, Math.min(2000, camera.z));
+    });
+
+    canvas.addEventListener('click', (e) => {
+      if (!canvas.clickableAreas) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      for (const area of canvas.clickableAreas) {
+        const distance = Math.sqrt((x - area.x) ** 2 + (y - area.y) ** 2);
+        if (distance <= area.radius) {
+          showInfo(area.body);
+          return;
+        }
+      }
+      
+      infoPanel.classList.remove('visible');
+      selectedBody = null;
+    });
+
+    document.getElementById('playPauseBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      isPlaying = !isPlaying;
+      e.target.textContent = isPlaying ? '⏸️ Pause' : '��️ Play';
+    });
+
+    document.getElementById('speedUpBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      timeSpeed = Math.min(timeSpeed * 2, 16);
+    });
+
+    document.getElementById('slowDownBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      timeSpeed = Math.max(timeSpeed / 2, 0.125);
+    });
+
+    document.getElementById('landEarthBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      const earth = celestialBodies.earth;
+      
+      landingStartCamera = { ...camera };
+      landingTargetCamera = {
+        x: earth.x,
+        y: earth.y,
+        z: 60,
+        rotX: 0.3,
+        rotY: 0
+      };
+      
+      isLanding = true;
+      landingProgress = 0;
+      
+      showInfo(earth);
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      camera = { x: 0, y: 0, z: 500, rotX: 0, rotY: 0 };
+      timeSpeed = 1;
+      infoPanel.classList.remove('visible');
+      selectedBody = null;
+      isLanding = false;
+    });
+
+    document.getElementById('exploreBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('welcomeScreen').style.display = 'none';
+      document.getElementById('canvasContainer').style.display = 'flex';
+      document.getElementById('canvasContainer').style.flex = '1';
+      resizeCanvas();
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+
+    async function onConfigChange(newConfig) {
+      const baseSize = newConfig.font_size || defaultConfig.font_size;
+      const customFont = newConfig.font_family || defaultConfig.font_family;
+      const baseFontStack = 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
+      
+      document.getElementById('mainTitle').textContent = newConfig.main_title || defaultConfig.main_title;
+      document.getElementById('subtitle').textContent = newConfig.subtitle || defaultConfig.subtitle;
+      document.getElementById('infoPanelTitle').textContent = newConfig.info_panel_title || defaultConfig.info_panel_title;
+      
+      document.body.style.background = `radial-gradient(ellipse at center, ${newConfig.surface_color || defaultConfig.surface_color} 0%, ${newConfig.background_color || defaultConfig.background_color} 100%)`;
+      document.body.style.color = newConfig.text_color || defaultConfig.text_color;
+      
+      document.querySelectorAll('h1').forEach(el => {
+        el.style.fontFamily = `${customFont}, ${baseFontStack}`;
+        el.style.fontSize = `${baseSize * 2}px`;
+        el.style.color = newConfig.text_color || defaultConfig.text_color;
+      });
+      
+      document.querySelectorAll('.subtitle').forEach(el => {
+        el.style.fontFamily = `${customFont}, ${baseFontStack}`;
+        el.style.fontSize = `${baseSize * 0.9}px`;
+        el.style.color = newConfig.text_color || defaultConfig.text_color;
+      });
+      
+      document.querySelectorAll('.controls, .info-panel, .legend').forEach(el => {
+        el.style.background = `${newConfig.surface_color || defaultConfig.surface_color}cc`;
+        el.style.color = newConfig.text_color || defaultConfig.text_color;
+      });
+      
+      document.querySelectorAll('.control-btn').forEach(el => {
+        el.style.background = newConfig.primary_action_color || defaultConfig.primary_action_color;
+        el.style.color = newConfig.text_color || defaultConfig.text_color;
+        el.style.fontFamily = `${customFont}, ${baseFontStack}`;
+        el.style.fontSize = `${baseSize * 0.85}px`;
+      });
+      
+      document.querySelectorAll('h2').forEach(el => {
+        el.style.fontFamily = `${customFont}, ${baseFontStack}`;
+        el.style.fontSize = `${baseSize * 1.3}px`;
+        el.style.color = newConfig.text_color || defaultConfig.text_color;
+      });
+      
+      document.querySelectorAll('h3, p, .legend-item, .instructions').forEach(el => {
+        el.style.fontFamily = `${customFont}, ${baseFontStack}`;
+        el.style.fontSize = `${baseSize * 0.85}px`;
+        el.style.color = newConfig.text_color || defaultConfig.text_color;
+      });
+      
+      if (selectedBody) {
+        showInfo(selectedBody);
+      }
+    }
+
+    function mapToCapabilities(config) {
+      return {
+        recolorables: [
+          {
+            get: () => config.background_color || defaultConfig.background_color,
+            set: (value) => {
+              config.background_color = value;
+              window.elementSdk.setConfig({ background_color: value });
+            }
+          },
+          {
+            get: () => config.surface_color || defaultConfig.surface_color,
+            set: (value) => {
+              config.surface_color = value;
+              window.elementSdk.setConfig({ surface_color: value });
+            }
+          },
+          {
+            get: () => config.text_color || defaultConfig.text_color,
+            set: (value) => {
+              config.text_color = value;
+              window.elementSdk.setConfig({ text_color: value });
+            }
+          },
+          {
+            get: () => config.primary_action_color || defaultConfig.primary_action_color,
+            set: (value) => {
+              config.primary_action_color = value;
+              window.elementSdk.setConfig({ primary_action_color: value });
+            }
+          }
+        ],
+        borderables: [],
+        fontEditable: {
+          get: () => config.font_family || defaultConfig.font_family,
+          set: (value) => {
+            config.font_family = value;
+            window.elementSdk.setConfig({ font_family: value });
+          }
+        },
+        fontSizeable: {
+          get: () => config.font_size || defaultConfig.font_size,
+          set: (value) => {
+            config.font_size = value;
+            window.elementSdk.setConfig({ font_size: value });
+          }
+        }
+      };
+    }
+
+    function mapToEditPanelValues(config) {
+      return new Map([
+        ["main_title", config.main_title || defaultConfig.main_title],
+        ["subtitle", config.subtitle || defaultConfig.subtitle],
+        ["info_panel_title", config.info_panel_title || defaultConfig.info_panel_title]
+      ]);
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities,
+        mapToEditPanelValues
+      });
+      
+      config = window.elementSdk.config;
+      onConfigChange(config);
+    }
+
+    resizeCanvas();
+    initStars();
+    animate();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a50a56306644478',t:'MTc2NDIzNjIzNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
